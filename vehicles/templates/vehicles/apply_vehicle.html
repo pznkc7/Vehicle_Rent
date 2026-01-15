@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Application history button -->
+<div class="mt-4 mx-4 text-end">
+    <a href="{% url 'my_vehicle_applications' %}" class="btn btn-primary">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Applications history
+    </a>
+</div>
+
+<div class="container py-4" style="max-width: 600px;">
+    <h2 class="fw-bold mb-3">Apply to Give Vehicle for Service</h2>
+    <p class="text-muted mb-4">
+        Your vehicle will be reviewed by our staff before becoming available.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %} 
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                <strong>Form errors:</strong>
+                {{ form.errors }}
+            </div>
+        {% endif %}
+
+        {{ form.vehicle_name.label_tag }}
+        {{ form.vehicle_name }}
+
+        {{ form.vehicle_type.label_tag }}
+        {{ form.vehicle_type }}
+
+        {{ form.price_per_hour.label_tag }}
+        {{ form.price_per_hour }}
+
+        {{ form.price_per_day.label_tag }}
+        {{ form.price_per_day }}
+
+        {{ form.image.label_tag }}
+        {{ form.image }}
+
+        {{ form.description.label_tag }}
+        {{ form.description }}
+
+        <!-- Pickup Address with current location button -->
+        <div class="mb-3">
+            <label class="fw-semibold">Pickup Address</label>
+            <div class="input-group">
+                {{ form.pickup_address }}
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        onclick="getCurrentLocation()">
+                    📍 Use Current Location
+                </button>
+            </div>
+            <small class="text-muted">
+                You may edit the address manually if needed.
+            </small>
+        </div>
+
+        <!-- Hidden lat/lng -->
+        {{ form.latitude }}
+        {{ form.longitude }}
+
+        <!-- MAP -->
+        <div class="mt-3 mb-4">
+            <label class="fw-semibold mb-2">Select Pickup Location</label>
+            <div id="map" style="height: 300px; border-radius: 8px;"></div>
+            <small class="text-muted">
+                Click on the map or use current location
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Submit Vehicle for Approval
+        </button>
+    </form>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form inputs
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const addressInput = document.getElementById("id_pickup_address");
+
+    // Default coordinates
+    let defaultLat = 27.7172;
+    let defaultLng = 85.3240;
+
+    // Initialize map
+    const map = L.map('map').setView([defaultLat, defaultLng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Marker variable
+    let marker = null;
+
+    // Function to set marker and update inputs
+    function setLocation(lat, lng) {
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng]).addTo(map);
+        }
+
+        if (latInput) latInput.value = lat.toFixed(6);
+        if (lngInput) lngInput.value = lng.toFixed(6);
+
+        // Reverse geocoding for address
+        if (addressInput && addressInput.value.trim() === "") {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        addressInput.value = data.display_name;
+                    }
+                })
+                .catch(err => console.error("Geocoding error:", err));
+        }
+    }
+
+    // Click on map to set marker
+    map.on('click', function(e) {
+        setLocation(e.latlng.lat, e.latlng.lng);
+    });
+
+    // If lat/lng already exists (editing), center map there
+    const existingLat = parseFloat(latInput.value);
+    const existingLng = parseFloat(lngInput.value);
+    if (!isNaN(existingLat) && !isNaN(existingLng)) {
+        map.setView([existingLat, existingLng], 15);
+        setLocation(existingLat, existingLng);
+    }
+
+    // Current location button
+    window.getCurrentLocation = function() {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 15);
+                setLocation(lat, lng);
+            },
+            error => {
+                alert("Location permission denied or unavailable.");
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000
+            }
+        );
+    }
+});
+</script>
+
+{% endblock %}

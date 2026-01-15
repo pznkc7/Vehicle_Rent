@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<style>
+    /* Ensure all card images have consistent responsive height */
+.card-img-top-wrapper {
+    width: 100%;
+    aspect-ratio: 4/3; /* maintains a 4:3 width:height ratio */
+    overflow: hidden;
+    border-top-left-radius: 0.375rem; /* match Bootstrap card border radius */
+    border-top-right-radius: 0.375rem;
+}
+
+.card-img-top-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* fills the wrapper while preserving aspect ratio */
+}
+
+</style>
+<div class="container py-4">
+
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h1 class="fw-bold">Available Vehicles</h1>
+        <p class="text-muted mb-0">
+            Browse and filter vehicles available for rent
+        </p>
+    </div>
+
+    <!-- Filter Section -->
+    <form method="get" class="card shadow-sm mb-4" id="filter-form">
+    <div class="card-body">
+        <div class="row g-3">
+            <!-- Search -->
+            <div class="col-12 col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Vehicle name or model">
+            </div>
+
+            <!-- Vehicle Type -->
+            <div class="col-6 col-md-2">
+                <label class="form-label">Type</label>
+               <select name="type" class="form-select">
+                    <option value="">All</option>
+                    {% with request.GET.type|default:'' as selected_type %}
+                        <option value="car" {% if selected_type == 'car' %}selected{% endif %}>Car</option>
+                        <option value="bike" {% if selected_type == 'bike' %}selected{% endif %}>Bike</option>
+                        <option value="suv" {% if selected_type == 'suv' %}selected{% endif %}>SUV</option>
+                    {% endwith %}
+                </select>
+
+            </div>
+
+            <!-- Max Price -->
+            <div class="col-6 col-md-2">
+                <label class="form-label">Max Price / Day</label>
+                <input type="number" name="price" value="{{ request.GET.price }}" class="form-control" placeholder="e.g. 3000">
+            </div>
+
+            <!-- Radius (Nearby) -->
+            <div class="col-6 col-md-2">
+                <label class="form-label">Nearby Radius (km)</label>
+                <input type="number" name="distance" value="{{ request.GET.distance|default:10 }}" class="form-control" placeholder="e.g. 10">
+            </div>
+
+            <!-- Current Location Button -->
+            <div class="col-6 col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100" onclick="useCurrentLocation()">Use Current Location</button>
+            </div>
+
+            <!-- Filter Button -->
+            <div class="col-12 col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-dark w-100">Filter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden inputs for latitude/longitude -->
+    <input type="hidden" name="latitude" id="latitude" value="{{ request.GET.latitude }}">
+    <input type="hidden" name="longitude" id="longitude" value="{{ request.GET.longitude }}">
+</form>
+
+<script>
+function useCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.getElementById('latitude').value = position.coords.latitude;
+                document.getElementById('longitude').value = position.coords.longitude;
+                document.getElementById('filter-form').submit(); // auto-submit after location found
+            },
+            function(error) {
+                alert("Location permission denied or unavailable.");
+            },
+            {enableHighAccuracy: true, timeout: 10000}
+        );
+    } else {
+        alert("Geolocation is not supported by your browser.");
+    }
+}
+</script>
+
+
+    <!-- Vehicles Grid -->
+    <div class="row g-4">
+    {% for vehicle in vehicles %}
+    <div class="col-12 col-sm-6 col-lg-4 d-flex">
+        <div class="card shadow-sm flex-fill">
+
+            <!-- Responsive Image Wrapper -->
+            <div class="card-img-top-wrapper">
+                <img
+                    src="{{ vehicle.image.url }}"
+                    class="card-img-top"
+                    alt="{{ vehicle.vehicle_name }}"
+                >
+            </div>
+
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ vehicle.vehicle_name }}</h5>
+
+                <p class="text-muted small mb-2">
+                    {{ vehicle.vehicle_type|title }}
+                </p>
+
+                <p class="fw-semibold mb-3">
+                    Rs. {{ vehicle.price_per_day }} / day
+                </p>
+
+                <a href="{% url 'vehicle_detail' vehicle.id %}"
+                   class="btn btn-outline-dark mt-auto">
+                    View Details
+                </a>
+            </div>
+
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-warning text-center">
+            No vehicles match your search.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+  <div class="card shadow">
+    <div class="card-header bg-dark text-white">
+      <h4>User Registration</h4>
+    </div>
+
+    <div class="card-body">
+      <form method="POST">
+        {% csrf_token %}
+
+        <h5>Account Details</h5>
+        {{ user_form.as_p }}
+
+        <hr>
+
+        <h5>Personal Details</h5>
+        {{ rental_form.as_p }}
+
+        <div class="d-grid mt-3">
+          <button type="submit" class="btn btn-warning">
+            Register
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

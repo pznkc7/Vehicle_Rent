@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+    <h3 class="fw-bold mb-4">My Vehicle Applications</h3>
+
+    {% if vehicles %}
+        <div class="row g-3">
+            {% for vehicle in vehicles %}
+                <div class="col-md-6">
+                    <div class="card shadow-sm">
+                        <img src="{{ vehicle.image.url }}" class="card-img-top">
+
+                        <div class="card-body">
+                            <h5>{{ vehicle.vehicle_name }}</h5>
+
+                            <p class="text-muted mb-1">
+                                Pickup: {{ vehicle.pickup_address }}
+                            </p>
+
+                            <p class="mb-2">
+                                Status:
+                                {% if vehicle.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif vehicle.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </p>
+
+                            <p class="small text-muted">
+                                Rs. {{ vehicle.price_per_hour }} / hour |
+                                Rs. {{ vehicle.price_per_day }} / day
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">No applications submitted yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
