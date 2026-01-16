@@ -10,19 +10,9 @@ from django.contrib.auth.decorators import login_required
 
 from vehicles.models import Vehicle
 from django.shortcuts import  get_object_or_404
-from math import radians, cos, sin, asin, sqrt
 
-# Haversine formula to calculate distance in km
-def haversine(lat1, lon1, lat2, lon2):
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    km = 6371 * c
-    return km
+
+
 
 def vehicles(request):
     vehicles = Vehicle.objects.filter(status='approved', is_available=True)
@@ -31,9 +21,6 @@ def vehicles(request):
     search_query = request.GET.get('q', '')
     vehicle_type = request.GET.get('type', '')
     max_price = request.GET.get('price', '')
-    user_lat = request.GET.get('latitude')
-    user_lng = request.GET.get('longitude')
-    max_distance = float(request.GET.get('distance', 10))  # default 10 km radius
 
     # Filter by search
     if search_query:
@@ -50,18 +37,6 @@ def vehicles(request):
             vehicles = vehicles.filter(price_per_day__lte=price)
         except:
             pass
-
-    # Filter by nearby location
-    if user_lat and user_lng:
-        user_lat = float(user_lat)
-        user_lng = float(user_lng)
-        nearby_vehicles = []
-        for v in vehicles:
-            if v.latitude and v.longitude:
-                distance = haversine(user_lat, user_lng, v.latitude, v.longitude)
-                if distance <= max_distance:
-                    nearby_vehicles.append(v.id)
-        vehicles = vehicles.filter(id__in=nearby_vehicles)
 
     context = {
         'vehicles': vehicles,

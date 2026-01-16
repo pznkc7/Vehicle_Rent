@@ -59,16 +59,6 @@
                 <input type="number" name="price" value="{{ request.GET.price }}" class="form-control" placeholder="e.g. 3000">
             </div>
 
-            <!-- Radius (Nearby) -->
-            <div class="col-6 col-md-2">
-                <label class="form-label">Nearby Radius (km)</label>
-                <input type="number" name="distance" value="{{ request.GET.distance|default:10 }}" class="form-control" placeholder="e.g. 10">
-            </div>
-
-            <!-- Current Location Button -->
-            <div class="col-6 col-md-2 d-flex align-items-end">
-                <button type="button" class="btn btn-outline-secondary w-100" onclick="useCurrentLocation()">Use Current Location</button>
-            </div>
 
             <!-- Filter Button -->
             <div class="col-12 col-md-1 d-flex align-items-end">
@@ -77,30 +67,10 @@
         </div>
     </div>
 
-    <!-- Hidden inputs for latitude/longitude -->
-    <input type="hidden" name="latitude" id="latitude" value="{{ request.GET.latitude }}">
-    <input type="hidden" name="longitude" id="longitude" value="{{ request.GET.longitude }}">
+    
 </form>
 
-<script>
-function useCurrentLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                document.getElementById('latitude').value = position.coords.latitude;
-                document.getElementById('longitude').value = position.coords.longitude;
-                document.getElementById('filter-form').submit(); // auto-submit after location found
-            },
-            function(error) {
-                alert("Location permission denied or unavailable.");
-            },
-            {enableHighAccuracy: true, timeout: 10000}
-        );
-    } else {
-        alert("Geolocation is not supported by your browser.");
-    }
-}
-</script>
+
 
 
     <!-- Vehicles Grid -->
@@ -123,6 +93,10 @@ function useCurrentLocation() {
 
                 <p class="text-muted small mb-2">
                     {{ vehicle.vehicle_type|title }}
+                </p>
+
+                <p class="text-muted small mb-2">
+                    {{ vehicle.pickup_address|title }}
                 </p>
 
                 <p class="fw-semibold mb-3">
