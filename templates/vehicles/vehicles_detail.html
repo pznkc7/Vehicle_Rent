@@ -1,6 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
 
+
+
+{% if vehicle.is_available and vehicle.status == "approved" %}
+    <span class="badge bg-success">Available</span>
+{% else %}
+    <span class="badge bg-danger">Not Available</span>
+{% endif %}
+{% if active_booking %}
+    <div class="alert alert-info mt-3">
+        <strong>🚗 Vehicle On Service</strong><br>
+        Time remaining:
+        <span id="time-remaining" class="fw-bold text-danger"></span>
+    </div>
+{% endif %}
+{% if active_booking %}
+<script>
+    const SERVICE_STARTED_AT = "{{ active_booking.service_started_at|date:'c' }}";
+    const SERVICE_TYPE = "{{ active_booking.service_type }}";
+    const TOTAL_HOURS = {{ active_booking.total_hours|default:0 }};
+    const TOTAL_DAYS = {{ active_booking.total_days|default:0 }};
+</script>
+{% endif %}
+
+
+
 <div class="container py-4">
 
     <div class="row g-4">
@@ -26,13 +51,18 @@
             </div>
             <p class="mt-3">{{ vehicle.description }}</p>
 
-            {% if vehicle.is_available %}
-                <a href="{% url 'book_vehicle' vehicle.id %}" class="btn btn-dark mt-3">Book Now
-                </a>
+            {% if vehicle.is_available and vehicle.status == "approved" and not active_booking %}
+            <a href="{% url 'create_booking' vehicle.id %}"
+            class="btn btn-success mt-3">
+            Book Vehicle
+            </a>
             {% else %}
-                <span class="badge bg-danger mt-3">Not Available</span>
+                <span class="badge bg-danger mt-3">
+                    Currently Unavailable
+                </span>
             {% endif %}
-        </div>
+
+          
     </div>
 
 </div>
@@ -62,6 +92,12 @@
           .bindPopup('{{ vehicle.vehicle_name }} Pickup Location')
           .openPopup( );
   });
+
+
+
+
+
+
 </script>
 
 {% endblock %}

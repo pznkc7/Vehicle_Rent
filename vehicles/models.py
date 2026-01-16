@@ -84,12 +84,3 @@ class Vehicle(models.Model):
 
 
 
-class Booking(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.username} → {self.vehicle.vehicle_name}"

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>My Bookings</h3>
+
+{% for booking in bookings %}
+<div class="card mb-3 p-3">
+    <h5>{{ booking.vehicle.vehicle_name }}</h5>
+    <p>Status: <strong>{{ booking.get_status_display }}</strong></p>
+    <p>Service Type: {{ booking.service_type }}</p>
+    <p>Total Price: Rs {{ booking.total_price }}</p>
+
+    {% if booking.status == 'active' %}
+        <p class="text-danger fw-bold">
+            Time Remaining:
+            <span id="timer-{{ booking.id }}"></span>
+        </p>
+
+        <script>
+            startCountdown(
+                "{{ booking.service_started_at|date:'c' }}",
+                "{{ booking.service_type }}",
+                {{ booking.total_hours|default:0 }},
+                {{ booking.total_days|default:0 }},
+                "timer-{{ booking.id }}"
+            );
+        </script>
+    {% endif %}
+</div>
+{% empty %}
+<p>No bookings yet.</p>
+{% endfor %}
+
+{% endblock %}

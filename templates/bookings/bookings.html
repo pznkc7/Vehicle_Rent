@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+ <h3>Book {{ vehicle.vehicle_name }}</h3>
+
+<form method="post">
+{% csrf_token %}
+
+<label>Service Type</label>
+<select name="service_type" id="serviceType" required>
+    <option value="">Select</option>
+    <option value="hour">Hourly</option>
+    <option value="day">Daily</option>
+</select>
+
+<div id="hourDiv" class="d-none">
+    <label>Hours (Max 10)</label>
+    <input type="number" name="hours" max="10">
+</div>
+
+<div id="dayDiv" class="d-none">
+    <label>Days (Max 3)</label>
+    <input type="number" name="days" max="3">
+</div>
+
+<p class="text-warning mt-2">
+⚠ Delay fine: Rs 500 per extra hour
+</p>
+
+<button class="btn btn-success mt-3">
+Proceed to Payment
+</button>
+
+</form>
+
+<script>
+const serviceType = document.getElementById("serviceType");
+const hourDiv = document.getElementById("hourDiv");
+const dayDiv = document.getElementById("dayDiv");
+
+serviceType.onchange = () => {
+    hourDiv.classList.toggle("d-none", serviceType.value !== "hour");
+    dayDiv.classList.toggle("d-none", serviceType.value !== "day");
+};
+
+</script>
+
+{% endblock %}

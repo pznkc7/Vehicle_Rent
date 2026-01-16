@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.shortcuts import render,redirect
 from django.contrib.auth.decorators import login_required
 
@@ -10,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 
 from vehicles.models import Vehicle
 from django.shortcuts import  get_object_or_404
-
+from bookings.models import Booking
 
 
 
@@ -47,8 +46,16 @@ def vehicles(request):
 def vehicle_detail(request, vehicle_id):
     vehicle = get_object_or_404(Vehicle, id=vehicle_id)
     
+    active_booking = None
+    if request.user.is_authenticated:
+        active_booking = Booking.objects.filter(
+            vehicle=vehicle,
+            status='active'
+        ).first()
+    
     context = {
         'vehicle': vehicle,
+        'active_booking': active_booking,
         'latitude': vehicle.latitude,    # Pass latitude
         'longitude': vehicle.longitude,  # Pass longitude
     }
@@ -93,48 +100,6 @@ def my_vehicle_applications(request):
 def vehicle_application_success(request):
     return render(request, 'vehicles/application_success.html')
 
-# ----------------------BOOKING VIEW--------------------------------
-
-from datetime import date
-from django.shortcuts import  get_object_or_404
-from vehicles.models import Booking , Vehicle
-
-@login_required
-def book_vehicle(request, vehicle_id):
-    vehicle = get_object_or_404(Vehicle, id=vehicle_id)
-
-    if request.method == 'POST':
-        start = request.POST.get('start_date')
-        end = request.POST.get('end_date')
-
-        conflict = Booking.objects.filter(
-            vehicle=vehicle,
-            start_date__lte=end,
-            end_date__gte=start
-        ).exists()
-
-        if conflict:
-            return render(request, 'booking.html', {
-                'vehicle': vehicle,
-                'error': 'Vehicle not available for selected dates'
-            })
-
-        Booking.objects.create(
-            user=request.user,
-            vehicle=vehicle,
-            start_date=start,
-            end_date=end
-        )
-
-        return redirect('my_bookings')
-
-    return render(request, 'vehicles/booking.html', {'vehicle': vehicle})
-
-
-@login_required
-def my_bookings(request):
-    bookings = Booking.objects.filter(user=request.user)
-    return render(request, 'vehicles/my_bookings.html', {'bookings': bookings})
 
 
     
