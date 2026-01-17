@@ -1,33 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>My Bookings</h3>
+<p><strong>Service:</strong> {{ booking.get_service_type_display }}</p>
+<p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+<p><strong>Start:</strong> {{ booking.booking_date }} {{ booking.start_time }}</p>
+<p><strong>Expected End:</strong> {{ booking.expected_end_at }}</p>
 
-{% for booking in bookings %}
-<div class="card mb-3 p-3">
-    <h5>{{ booking.vehicle.vehicle_name }}</h5>
-    <p>Status: <strong>{{ booking.get_status_display }}</strong></p>
-    <p>Service Type: {{ booking.service_type }}</p>
-    <p>Total Price: Rs {{ booking.total_price }}</p>
+{% if booking.status == 'active' %}
+    <p class="fw-bold text-success">
+        ⏳ Time Remaining:
+        <span id="timer-{{ booking.id }}"></span>
+    </p>
 
-    {% if booking.status == 'active' %}
-        <p class="text-danger fw-bold">
-            Time Remaining:
-            <span id="timer-{{ booking.id }}"></span>
-        </p>
+    <script>
+        startCountdown(
+            "{{ booking.id }}",
+            "{{ booking.expected_end_at|date:'c' }}"
+        );
+    </script>
+{% endif %}
 
-        <script>
-            startCountdown(
-                "{{ booking.service_started_at|date:'c' }}",
-                "{{ booking.service_type }}",
-                {{ booking.total_hours|default:0 }},
-                {{ booking.total_days|default:0 }},
-                "timer-{{ booking.id }}"
-            );
-        </script>
-    {% endif %}
-</div>
-{% empty %}
-<p>No bookings yet.</p>
-{% endfor %}
+
+<script>
+function startCountdown(id, endTime) {
+    const el = document.getElementById(`timer-${id}`);
+    const end = new Date(endTime).getTime();
+
+    setInterval(() => {
+        const now = new Date().getTime();
+        const diff = end - now;
+
+        if (diff <= 0) {
+            el.innerText = "Expired";
+            return;
+        }
+
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        el.innerText = `${h}h ${m}m ${s}s`;
+    }, 1000);
+}
+
+startCountdown(
+    "{{ booking.id }}",
+    "{{ booking.expected_end_at|date:'c' }}"
+);
+
+</script>
+
 
 {% endblock %}

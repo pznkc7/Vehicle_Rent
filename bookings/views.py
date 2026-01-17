@@ -19,12 +19,19 @@ def create_booking(request, vehicle_id):
         hours = request.POST.get("hours")
         days = request.POST.get("days")
 
-        if service_type == 'hour' and int(hours) > 10:
-            messages.error(request, "Maximum 10 hours allowed")
-            return redirect(request.path)
-
-        if service_type == 'day' and int(days) > 3:
-            messages.error(request, "Maximum 3 days allowed")
+        try:
+            if service_type == 'hour':
+                hours = int(hours) if hours else 0
+                if hours > 10:
+                    messages.error(request, "Maximum 10 hours allowed")
+                    return redirect(request.path)
+            elif service_type == 'day':
+                days = int(days) if days else 0
+                if days > 3:
+                    messages.error(request, "Maximum 3 days allowed")
+                    return redirect(request.path)
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid hours or days provided")
             return redirect(request.path)
 
         price = (
@@ -37,8 +44,8 @@ def create_booking(request, vehicle_id):
             user=request.user,
             vehicle=vehicle,
             service_type=service_type,
-            total_hours=hours if service_type == 'hour' else None,
-            total_days=days if service_type == 'day' else None,
+            hours=hours if service_type == 'hour' else None,
+            days=days if service_type == 'day' else None,
             total_price=price,
             status='confirmed'
         )
@@ -57,8 +64,7 @@ def start_service(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id)
 
     if request.user == booking.user or request.user == booking.vehicle.owner:
-        if not booking.service_started_at:
-            booking.service_started_at = timezone.now()
+        if booking.status != 'active':
             booking.status = 'active'
             booking.save()
 

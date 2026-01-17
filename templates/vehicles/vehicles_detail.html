@@ -52,10 +52,10 @@
             <p class="mt-3">{{ vehicle.description }}</p>
 
             {% if vehicle.is_available and vehicle.status == "approved" and not active_booking %}
-            <a href="{% url 'create_booking' vehicle.id %}"
-            class="btn btn-success mt-3">
-            Book Vehicle
+            <a href="{% url 'create_booking' vehicle.id %}" class="btn btn-primary mt-3">
+                     Book Vehicle
             </a>
+
             {% else %}
                 <span class="badge bg-danger mt-3">
                     Currently Unavailable

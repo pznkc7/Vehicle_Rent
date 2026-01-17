@@ -1,48 +1,60 @@
 {% extends "base.html" %}
 {% block content %}
 
- <h3>Book {{ vehicle.vehicle_name }}</h3>
-
 <form method="post">
-{% csrf_token %}
+    {% csrf_token %}
+  
+    <h3 class="mb-4">Book {{ vehicle.name }}</h3>
 
-<label>Service Type</label>
-<select name="service_type" id="serviceType" required>
-    <option value="">Select</option>
-    <option value="hour">Hourly</option>
-    <option value="day">Daily</option>
-</select>
+    <!-- Service Type -->
+    <label class="fw-semibold">Service Type</label>
+    <select name="service_type" class="form-select mb-3" required>
+        <option value="">Select service</option>
+        <option value="hour">Hourly (Max 10 hours)</option>
+        <option value="day">Daily (Max 3 days)</option>
+    </select>
 
-<div id="hourDiv" class="d-none">
-    <label>Hours (Max 10)</label>
-    <input type="number" name="hours" max="10">
-</div>
+    <!-- Booking Date -->
+    <label class="fw-semibold">Booking Date</label>
+    <input type="date" name="booking_date" class="form-control mb-3" required>
 
-<div id="dayDiv" class="d-none">
-    <label>Days (Max 3)</label>
-    <input type="number" name="days" max="3">
-</div>
+    <!-- Start Time -->
+    <label class="fw-semibold">Start Time</label>
+    <input type="time" name="start_time" class="form-control mb-3" required>
 
-<p class="text-warning mt-2">
-⚠ Delay fine: Rs 500 per extra hour
-</p>
+    <!-- Hours -->
+    <div id="hour-field" style="display:none;">
+        <label class="fw-semibold">Total Hours (Max 10)</label>
+        <input type="number" name="hours" min="1" max="10"
+               class="form-control mb-3">
+    </div>
 
-<button class="btn btn-success mt-3">
-Proceed to Payment
-</button>
+    <!-- Days -->
+    <div id="day-field" style="display:none;">
+        <label class="fw-semibold">Total Days (Max 3)</label>
+        <input type="number" name="days" min="1" max="3"
+               class="form-control mb-3">
+    </div>
 
+    <div class="alert alert-warning">
+        ⏰ Max 10 hours / 3 days<br>
+        ⚠️ Late fine: Rs 500 per hour
+    </div>
+
+    <button class="btn btn-dark w-100">
+        Confirm Booking
+    </button>
 </form>
-
 <script>
-const serviceType = document.getElementById("serviceType");
-const hourDiv = document.getElementById("hourDiv");
-const dayDiv = document.getElementById("dayDiv");
+    const serviceSelect = document.querySelector('[name="service_type"]');
+    const hourField = document.getElementById('hour-field');
+    const dayField = document.getElementById('day-field');
 
-serviceType.onchange = () => {
-    hourDiv.classList.toggle("d-none", serviceType.value !== "hour");
-    dayDiv.classList.toggle("d-none", serviceType.value !== "day");
-};
-
+    serviceSelect.addEventListener('change', function () {
+        hourField.style.display = this.value === 'hour' ? 'block' : 'none';
+        dayField.style.display = this.value === 'day' ? 'block' : 'none';
+    });
 </script>
+
 
 {% endblock %}

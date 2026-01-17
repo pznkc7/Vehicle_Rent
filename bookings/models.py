@@ -1,44 +1,108 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.contrib.auth.models import User
-from vehicles.models import Vehicle
-from datetime import timedelta
+from django.utils import timezone
+from datetime import datetime, timedelta
 
-# bookings/models.py
+from vehicles.models import Vehicle
+
+
 class Booking(models.Model):
-    SERVICE_TYPE_CHOICES = (
+
+    # -------------------- CHOICES --------------------
+    SERVICE_TYPE_CHOICES = [
         ('hour', 'Hourly'),
         ('day', 'Daily'),
-    )
+    ]
 
-    STATUS_CHOICES = (
+    STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('active', 'On Service'),
         ('completed', 'Completed'),
+        ('late', 'Late'),
         ('cancelled', 'Cancelled'),
+    ]
+
+    # -------------------- RELATIONS --------------------
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='bookings'
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name='bookings'
+    )
 
-    service_type = models.CharField(max_length=10, choices=SERVICE_TYPE_CHOICES)
-    total_hours = models.PositiveIntegerField(null=True, blank=True)
-    total_days = models.PositiveIntegerField(null=True, blank=True)
+    # -------------------- BOOKING INFO --------------------
+    service_type = models.CharField(
+        max_length=10,
+        choices=SERVICE_TYPE_CHOICES
+    )
 
-    booking_date = models.DateTimeField(auto_now_add=True)
-    service_started_at = models.DateTimeField(null=True, blank=True)
+    booking_date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    hours = models.PositiveIntegerField(null=True, blank=True)
+    days = models.PositiveIntegerField(null=True, blank=True)
 
+    # -------------------- TIME TRACKING --------------------
+    expected_end_at = models.DateTimeField(null=True, blank=True)
+    actual_end_at = models.DateTimeField(null=True, blank=True)
+
+    # -------------------- PAYMENT --------------------
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    fine_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    late_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
-    def expected_end_time(self):
-        if not self.service_started_at:
+    # -------------------- STATUS --------------------
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    # -------------------- CORE LOGIC --------------------
+    def calculate_expected_end(self):
+        """
+        Calculates expected_end_at based on service type
+        """
+        start_dt = datetime.combine(self.booking_date, self.start_time)
+
+        if self.service_type == 'hour' and self.hours:
+            return start_dt + timedelta(hours=self.hours)
+
+        if self.service_type == 'day' and self.days:
+            return start_dt + timedelta(days=self.days)
+
+        return None
+
+    def is_late(self):
+        """
+        Checks if booking is late (used in admin & frontend)
+        """
+        if self.status != 'active' or not self.expected_end_at:
+            return False
+        return timezone.now() > self.expected_end_at
+
+    def remaining_time(self):
+        """
+        Remaining time for frontend countdown
+        """
+        if self.status != 'active' or not self.expected_end_at:
             return None
-        if self.service_type == 'hour':
-            return self.service_started_at + timedelta(hours=self.total_hours)
-        return self.service_started_at + timedelta(days=self.total_days)
+        return self.expected_end_at - timezone.now()
+
+    def save(self, *args, **kwargs):
+        """
+        Auto-set expected_end_at safely
+        """
+        if not self.expected_end_at:
+            self.expected_end_at = self.calculate_expected_end()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} → {self.vehicle.vehicle_name} ({self.status})"
