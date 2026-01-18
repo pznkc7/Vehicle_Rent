@@ -1,53 +1,56 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
 {% block content %}
-<p><strong>Service:</strong> {{ booking.get_service_type_display }}</p>
-<p><strong>Status:</strong> {{ booking.get_status_display }}</p>
-<p><strong>Start:</strong> {{ booking.booking_date }} {{ booking.start_time }}</p>
-<p><strong>Expected End:</strong> {{ booking.expected_end_at }}</p>
+{% if bookings %}
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Vehicle</th>
+            <th>Service Type</th>
+            <th>Booking Date</th>
+            <th>Start Time</th>
+            <th>Duration</th>
+            <th>Total Price</th>
+            <th>Status</th>
+            <th>Expected End</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for booking in bookings %}
+        <tr>
+            <td>{{ booking.vehicle.vehicle_name }}</td>
 
-{% if booking.status == 'active' %}
-    <p class="fw-bold text-success">
-        ⏳ Time Remaining:
-        <span id="timer-{{ booking.id }}"></span>
-    </p>
+            <td>{{ booking.get_service_type_display }}</td>
 
-    <script>
-        startCountdown(
-            "{{ booking.id }}",
-            "{{ booking.expected_end_at|date:'c' }}"
-        );
-    </script>
+            <td>{{ booking.booking_date }}</td>
+
+            <td>{{ booking.start_time }}</td>
+
+            <td>
+                {% if booking.service_type == 'hour' %}
+                    {{ booking.hours }} hour(s)
+                {% elif booking.service_type == 'day' %}
+                    {{ booking.days }} day(s)
+                {% endif %}
+            </td>
+
+            <td>Rs. {{ booking.total_price }}</td>
+
+            <td>{{ booking.get_status_display }}</td>
+
+            <td>
+                {% if booking.expected_end_at %}
+                    {{ booking.expected_end_at|date:"Y-m-d H:i" }}
+                {% else %}
+                    Not started
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No bookings found.</p>
 {% endif %}
-
-
-<script>
-function startCountdown(id, endTime) {
-    const el = document.getElementById(`timer-${id}`);
-    const end = new Date(endTime).getTime();
-
-    setInterval(() => {
-        const now = new Date().getTime();
-        const diff = end - now;
-
-        if (diff <= 0) {
-            el.innerText = "Expired";
-            return;
-        }
-
-        const h = Math.floor(diff / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-
-        el.innerText = `${h}h ${m}m ${s}s`;
-    }, 1000);
-}
-
-startCountdown(
-    "{{ booking.id }}",
-    "{{ booking.expected_end_at|date:'c' }}"
-);
-
-</script>
-
 
 {% endblock %}
