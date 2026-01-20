@@ -101,5 +101,12 @@ def vehicle_application_success(request):
     return render(request, 'vehicles/application_success.html')
 
 
+from vehicles.models import Vehicle
 
+@login_required
+def my_vehicles(request):
+    vehicles = Vehicle.objects.filter(owner=request.user).order_by('-created_at')
+    return render(request, 'vehicles/my_vehicles.html', {
+        'vehicles': vehicles
+    })
     

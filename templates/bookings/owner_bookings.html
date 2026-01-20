@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+
+    <h3 class="fw-bold mb-4">Incoming Bookings</h3>
+
+    {% if bookings %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Booked By</th>
+                    <th>Service</th>
+                    <th>Duration</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Booked On</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>
+                        <strong>{{ booking.vehicle.vehicle_name }}</strong>
+                    </td>
+
+                    <td>
+                        {{ booking.user.username }}
+                    </td>
+
+                    <td>
+                        {{ booking.get_service_type_display }}
+                    </td>
+
+                    <td>
+                        {% if booking.service_type == 'hour' %}
+                            {{ booking.hours }} hour(s)
+                        {% else %}
+                            {{ booking.days }} day(s)
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        Rs. {{ booking.total_price }}
+                    </td>
+
+                    <td>
+                        {% if booking.status == 'confirmed' %}
+                            <span class="badge bg-primary">Confirmed</span>
+                        {% elif booking.status == 'active' %}
+                            <span class="badge bg-success">On Service</span>
+                        {% elif booking.status == 'completed' %}
+                            <span class="badge bg-secondary">Completed</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                {{ booking.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {{ booking.created_at|date:"M d, Y H:i" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+        <div class="alert alert-info">
+            No bookings have been made for your vehicles yet.
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

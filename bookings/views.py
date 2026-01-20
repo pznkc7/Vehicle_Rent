@@ -7,10 +7,14 @@ from datetime import datetime, timedelta
 from .models import Booking
 from vehicles.models import Vehicle
 
-
+#-------------------------------CREATE BOOKING VIEW---------------------------------
 @login_required
 def create_booking(request, vehicle_id):
     vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+    
+    if vehicle.owner == request.user:
+        messages.error(request, "You cannot book your own vehicle.")
+        return redirect('vehicle_detail', vehicle_id=vehicle.id)
 
     if request.method == "POST":
         service_type = request.POST.get("service_type")
@@ -68,36 +72,40 @@ def create_booking(request, vehicle_id):
 
     return render(request, 'bookings/bookings.html', {'vehicle': vehicle})
 
+#-------------------------------MY BOOKINGS VIEW---------------------------------
 
 @login_required
 def my_bookings(request):
     bookings = Booking.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'bookings/my_bookings.html', {'bookings': bookings})
 
-
+#-------------------------------INCOMING BOOKINGS VIEW---------------------------------
 @login_required
-def start_service(request, booking_id):
+def owner_bookings(request):
+    bookings = Booking.objects.filter(
+        vehicle__owner=request.user
+    ).select_related('vehicle', 'user').order_by('-created_at')
+
+    return render(request, 'bookings/owner_bookings.html', {
+        'bookings': bookings
+    })
+
+#-------------------------------CONFIRM PICKUP VIEW---------------------------------
+@login_required
+def confirm_pickup(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id)
 
-    if request.user not in [booking.user, booking.vehicle.owner]:
-        messages.error(request, "Unauthorized action.")
-        return redirect('my_bookings')
+    # User confirms
+    if request.user == booking.user:
+        booking.user_confirmed_pickup = True
 
-    if booking.status != 'active':
-        start_datetime = datetime.combine(
-            booking.booking_date,
-            booking.start_time
-        )
+    # Owner confirms
+    elif request.user == booking.vehicle.owner:
+        booking.owner_confirmed_pickup = True
 
-        start_datetime = timezone.make_aware(start_datetime)
+    booking.save()
 
-        if booking.service_type == 'hour':
-            booking.expected_end_at = start_datetime + timedelta(hours=booking.hours)
-        else:
-            booking.expected_end_at = start_datetime + timedelta(days=booking.days)
-
-        booking.status = 'active'
-        booking.save()
-        messages.success(request, "Service started.")
+    # 🔑 Try to start service
+    booking.start_service_if_ready()
 
     return redirect('my_bookings')

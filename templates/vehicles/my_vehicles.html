@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+
+    <h3 class="fw-bold mb-4">My Vehicles</h3>
+
+    {% if vehicles %}
+    <div class="row g-4">
+        {% for vehicle in vehicles %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+
+                <img src="{{ vehicle.image.url }}"
+                     class="card-img-top"
+                     style="height: 200px; object-fit: cover;">
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ vehicle.vehicle_name }}</h5>
+
+                    <p class="mb-1">
+                        <strong>Type:</strong> {{ vehicle.get_vehicle_type_display }}
+                    </p>
+
+                    <p class="mb-1">
+                        <strong>Status:</strong>
+                        {% if vehicle.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif vehicle.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% endif %}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Availability:</strong>
+                        {% if vehicle.is_available %}
+                            <span class="text-success">Available</span>
+                        {% else %}
+                            <span class="text-muted">Not Available</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="card-footer bg-light text-end">
+                    <small class="text-muted">
+                        Added on {{ vehicle.created_at|date:"M d, Y" }}
+                    </small>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+        <div class="alert alert-info">
+            You have not added any vehicles yet.
+            <a href="{% url 'apply_vehicle' %}" class="alert-link">
+                Add your first vehicle
+            </a>.
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

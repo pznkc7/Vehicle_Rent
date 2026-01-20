@@ -27,6 +27,8 @@ def register(request):
             rental_user.email = user.email
             rental_user.save()
 
+            messages.success(request, "Registration successful. Please log in.")
+
             # login(request, user)  # auto-login
             return redirect('login')
 
@@ -68,6 +70,7 @@ def user_login(request):
 
 def user_logout(request):
     logout(request)
+    messages.info(request, "You have successfully logged out.")
     return redirect('home')
 
 
