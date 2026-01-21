@@ -110,11 +110,24 @@
                     <a class="nav-link dropdown-toggle" href="#" role="button"
                        data-bs-toggle="dropdown">
                         Vehicles
+                        {% if unread_notifications > 0 %}
+                            <span class="badge bg-danger rounded-pill ms-1"
+                                style="font-size: 10px;">
+                                {{ unread_notifications }}
+                            </span>
+                        {% endif %}
+                        
                     </a>
                     <ul class="dropdown-menu">
                         <li>
                             <a class="dropdown-item" href="{% url 'owner_bookings' %}">
                                 Incoming Bookings
+                                {% if unread_notifications > 0 %}
+                                    <span class="badge bg-danger rounded-pill ms-1"
+                                        style="font-size: 10px;">
+                                        {{ unread_notifications }}
+                                    </span>
+                                {% endif %}
                             </a>
                         </li>
                         <li>

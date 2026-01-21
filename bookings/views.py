@@ -55,7 +55,7 @@ def create_booking(request, vehicle_id):
             messages.error(request, "Invalid service type.")
             return redirect(request.path)
 
-        Booking.objects.create(
+        booking = Booking.objects.create(
             user=request.user,
             vehicle=vehicle,
             service_type=service_type,
@@ -66,7 +66,12 @@ def create_booking(request, vehicle_id):
             total_price=total_price,
             status='confirmed'
         )
-
+        #-----------------Create notification for vehicle owner--------------------
+        if vehicle.owner and vehicle.owner != request.user:
+            Notification.objects.create(
+                user=vehicle.owner,
+                booking=booking
+            )
         messages.success(request, "Booking created successfully.")
         return redirect('my_bookings')
 
@@ -83,13 +88,19 @@ def my_bookings(request):
 @login_required
 def owner_bookings(request):
     bookings = Booking.objects.filter(
-        vehicle__owner=request.user
-    ).select_related('vehicle', 'user').order_by('-created_at')
+        vehicle__owner=request.user,
+        status__in=['pending', 'confirmed', 'active']
+    ).exclude(
+        user=request.user
+    ).select_related(
+        'vehicle', 'user'
+    ).order_by(
+        '-created_at'
+    )
 
     return render(request, 'bookings/owner_bookings.html', {
         'bookings': bookings
     })
-
 #-------------------------------CONFIRM PICKUP VIEW---------------------------------
 @login_required
 def confirm_pickup(request, booking_id):
@@ -109,3 +120,4 @@ def confirm_pickup(request, booking_id):
     booking.start_service_if_ready()
 
     return redirect('my_bookings')
+
