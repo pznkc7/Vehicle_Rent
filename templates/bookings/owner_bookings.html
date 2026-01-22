@@ -1,80 +1,80 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
 {% block content %}
+<h4 class="mb-3">Incoming Bookings</h4>
 
-<div class="container py-4">
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Vehicle</th>
+            <th>Service</th>
+            <th>Status</th>
+            <th>Pickup</th>
+            <th>Timer</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for booking in bookings %}
+        <tr>
+            <td>{{ booking.user.username }}</td>
+            <td>{{ booking.vehicle.vehicle_name }}</td>
+            <td>{{ booking.get_service_type_display }}</td>
+            <td>{{ booking.get_status_display }}</td>
 
-    <h3 class="fw-bold mb-4">Incoming Bookings</h3>
+            <td>
+                {% if not booking.owner_confirmed_pickup %}
+                    <a href="{% url 'confirm_pickup' booking.id %}"class="btn btn-sm btn-warning">
+                        Confirm Pickup
+                    </a>
+                {% else %}
+                    <span class="text-success">Confirmed</span>
+                {% endif %}
+            </td>
 
-    {% if bookings %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Vehicle</th>
-                    <th>Booked By</th>
-                    <th>Service</th>
-                    <th>Duration</th>
-                    <th>Total Price</th>
-                    <th>Status</th>
-                    <th>Booked On</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for booking in bookings %}
-                <tr>
-                    <td>
-                        <strong>{{ booking.vehicle.vehicle_name }}</strong>
-                    </td>
+            <td>
+                {% if booking.status == 'active' %}
+                    <span id="timer-{{ booking.id }}"></span>
 
-                    <td>
-                        {{ booking.user.username }}
-                    </td>
+                    <script>
+                    (function () {
+                        const end = new Date("{{ booking.expected_end_at|date:'c' }}").getTime();
+                        const el = document.getElementById("timer-{{ booking.id }}");
 
-                    <td>
-                        {{ booking.get_service_type_display }}
-                    </td>
+                        function tick() {
+                            const now = new Date().getTime();
+                            const diff = end - now;
 
-                    <td>
-                        {% if booking.service_type == 'hour' %}
-                            {{ booking.hours }} hour(s)
-                        {% else %}
-                            {{ booking.days }} day(s)
-                        {% endif %}
-                    </td>
+                            if (diff <= 0) {
+                                el.innerHTML = "Expired";
+                                el.classList.add("text-danger");
+                                return;
+                            }
 
-                    <td>
-                        Rs. {{ booking.total_price }}
-                    </td>
+                            const h = Math.floor(diff / (1000 * 60 * 60));
+                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-                    <td>
-                        {% if booking.status == 'confirmed' %}
-                            <span class="badge bg-primary">Confirmed</span>
-                        {% elif booking.status == 'active' %}
-                            <span class="badge bg-success">On Service</span>
-                        {% elif booking.status == 'completed' %}
-                            <span class="badge bg-secondary">Completed</span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark">
-                                {{ booking.get_status_display }}
-                            </span>
-                        {% endif %}
-                    </td>
+                            el.innerHTML = `${h}h ${m}m ${s}s`;
+                        }
 
-                    <td>
-                        {{ booking.created_at|date:"M d, Y H:i" }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                        tick();
+                        setInterval(tick, 1000);
+                    })();
+                    </script>
+                    {% if booking.status == 'active' %}
+                    <a href="{% url 'confirm_return' booking.id %}"
+                    class="btn btn-sm btn-danger mt-1">
+                        Confirm Return
+                    </a>
+                    {% endif %}
 
-    {% else %}
-        <div class="alert alert-info">
-            No bookings have been made for your vehicles yet.
-        </div>
-    {% endif %}
-
-</div>
-
+                {% else %}
+                    <span class="text-muted">Not started</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

@@ -74,6 +74,13 @@
                         setInterval(tick, 1000);
                     })();
                     </script>
+                    {% if booking.status == 'active' %}
+                    <a href="{% url 'confirm_return' booking.id %}"
+                    class="btn btn-sm btn-danger mt-1">
+                        Confirm Return
+                    </a>
+                    {% endif %}
+
                 {% else %}
                     <span class="text-muted">Not started</span>
                 {% endif %}

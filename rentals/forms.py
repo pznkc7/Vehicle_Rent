@@ -6,10 +6,12 @@ from .models import Rental_User
 class UserRegistrationForm(forms.ModelForm):
     password1 = forms.CharField(
         label='Password',
+        
         widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
     password2 = forms.CharField(
         label='Confirm Password',
+        
         widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
 
