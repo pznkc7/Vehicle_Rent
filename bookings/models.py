@@ -50,7 +50,7 @@ class Booking(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     late_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='confirmed')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def calculate_expected_end(self):

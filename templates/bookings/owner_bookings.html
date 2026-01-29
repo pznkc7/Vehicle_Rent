@@ -10,7 +10,7 @@
             <th>Vehicle</th>
             <th>Service</th>
             <th>Status</th>
-            <th>Pickup</th>
+            <th>Actions</th>
             <th>Timer</th>
         </tr>
     </thead>
@@ -20,18 +20,61 @@
             <td>{{ booking.user.username }}</td>
             <td>{{ booking.vehicle.vehicle_name }}</td>
             <td>{{ booking.get_service_type_display }}</td>
-            <td>{{ booking.get_status_display }}</td>
 
+            <!-- STATUS -->
             <td>
-                {% if not booking.owner_confirmed_pickup %}
-                    <a href="{% url 'confirm_pickup' booking.id %}"class="btn btn-sm btn-warning">
-                        Confirm Pickup
-                    </a>
+                {% if booking.status == 'active' %}
+                    <span class="text-success">On Service</span>
+                {% elif booking.status == 'completed' %}
+                    <span class="text-success">Completed</span>
+                {% elif booking.status == 'late' %}
+                    <span class="text-danger">Late</span>
                 {% else %}
-                    <span class="text-success">Confirmed</span>
+                    {{ booking.get_status_display }}
                 {% endif %}
             </td>
 
+            <!-- ACTIONS -->
+            <td>
+                {# PENDING → ACCEPT / REJECT #}
+                {% if booking.status == 'pending' %}
+                    <a href="{% url 'owner_accept_booking' booking.id %}"
+                       class="btn btn-sm btn-success">
+                        Accept
+                    </a>
+                    <a href="{% url 'owner_reject_booking' booking.id %}"
+                       class="btn btn-sm btn-danger">
+                        Reject
+                    </a>
+
+                {# CONFIRMED → PICKUP CONFIRM #}
+                {% elif booking.status == 'confirmed' %}
+                    {% if not booking.owner_confirmed_pickup %}
+                        <a href="{% url 'confirm_pickup' booking.id %}"
+                           class="btn btn-sm btn-warning">
+                            Confirm Pickup
+                        </a>
+                    {% else %}
+                        <span class="text-muted">Waiting for user</span>
+                    {% endif %}
+
+                {# ACTIVE → RETURN CONFIRM #}
+                {% elif booking.status == 'active' %}
+                    {% if not booking.owner_confirmed_return %}
+                        <a href="{% url 'confirm_return' booking.id %}"
+                           class="btn btn-sm btn-danger">
+                            Confirm Return
+                        </a>
+                    {% else %}
+                        <span class="text-muted">Waiting for user</span>
+                    {% endif %}
+
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+
+            <!-- TIMER -->
             <td>
                 {% if booking.status == 'active' %}
                     <span id="timer-{{ booking.id }}"></span>
@@ -62,15 +105,8 @@
                         setInterval(tick, 1000);
                     })();
                     </script>
-                    {% if booking.status == 'active' %}
-                    <a href="{% url 'confirm_return' booking.id %}"
-                    class="btn btn-sm btn-danger mt-1">
-                        Confirm Return
-                    </a>
-                    {% endif %}
-
                 {% else %}
-                    <span class="text-muted">Not started</span>
+                    <span class="text-muted">Not active</span>
                 {% endif %}
             </td>
         </tr>

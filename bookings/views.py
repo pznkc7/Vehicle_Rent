@@ -1,14 +1,17 @@
+from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.contrib.auth.models import User
 
 from .models import Booking , Notification
 from vehicles.models import Vehicle
 
 #-------------------------------CREATE BOOKING VIEW---------------------------------
-@login_required
+@login_required(login_url='login')
+
 def create_booking(request, vehicle_id):
     vehicle = get_object_or_404(Vehicle, id=vehicle_id)
     
@@ -64,7 +67,7 @@ def create_booking(request, vehicle_id):
             hours=hours if service_type == 'hour' else None,
             days=days if service_type == 'day' else None,
             total_price=total_price,
-            status='confirmed'
+            status='pending'
         )
         #-----------------Create notification for vehicle owner--------------------
         if vehicle.owner and vehicle.owner != request.user:
@@ -98,7 +101,7 @@ def owner_bookings(request):
         '-created_at'
     )
 
-    # ✅ MARK OWNER'S BOOKING NOTIFICATIONS AS READ
+    # MARK OWNER'S BOOKING NOTIFICATIONS AS READ
     Notification.objects.filter(
         user=request.user,
         is_read=False,
@@ -108,80 +111,28 @@ def owner_bookings(request):
     return render(request, 'bookings/owner_bookings.html', {
         'bookings': bookings
     })
-#-------------------------------CONFIRM PICKUP VIEW---------------------------------
-# bookings/views.py
 
-@login_required
-def confirm_pickup(request, booking_id):
-    booking = get_object_or_404(Booking, id=booking_id)
-
-    # USER confirms
-    if request.user == booking.user:
-        booking.user_confirmed_pickup = True
-
-    # OWNER confirms
-    elif request.user == booking.vehicle.owner:
-        booking.owner_confirmed_pickup = True
-
-    else:
-        messages.error(request, "Not allowed")
-        return redirect('home')
-
-    booking.save()
-    booking.start_service_if_ready()
-
-    messages.success(request, "Pickup confirmed")
-    return redirect(request.META.get('HTTP_REFERER', 'home'))
-
-#----------------------------------CONFIRM RETURN VIEW ------------------------------------------
-
-@login_required
-def confirm_return(request, booking_id):
-    booking = get_object_or_404(Booking, id=booking_id)
-
-    if request.user == booking.user:
-        booking.user_confirmed_return = True
-
-    elif request.user == booking.vehicle.owner:
-        booking.owner_confirmed_return = True
-
-    else:
-        messages.error(request, "Not allowed")
-        return redirect('home')
-
-    if booking.user_confirmed_return and booking.owner_confirmed_return:
-        booking.actual_end_at = timezone.now()
-        booking.status = 'completed'
-        booking.save()
-
-    else:
-        booking.save()
-
-    messages.success(request, "Return confirmation updated")
-    return redirect(request.META.get('HTTP_REFERER', 'home'))
-
-
-
+#-------------------------------ACCEPT/REJECT BOOKING BY VEHICLE OWNER ---------------------------------
 
 @login_required
 def owner_accept_booking(request, booking_id):
     booking = get_object_or_404(
         Booking,
         id=booking_id,
-        vehicle__owner=request.user,
-        status='pending'
+        vehicle__owner=request.user
+       
     )
 
-    booking.status = 'confirmed'
-    booking.save(update_fields=['status'])
-
+    if booking.status == 'pending':
+       booking.status = 'confirmed'
+       booking.save()
+       messages.success(request, "Booking accepted")
     # Notify customer
-    Notification.objects.create(
-        user=booking.user,
-        booking=booking
-    )
+    # Notification.objects.create(
+    #     user=booking.user,
+    #     booking=booking
+    # )
 
-    messages.success(request, "Booking accepted successfully.")
     return redirect('owner_bookings')
 
 
@@ -190,18 +141,87 @@ def owner_reject_booking(request, booking_id):
     booking = get_object_or_404(
         Booking,
         id=booking_id,
-        vehicle__owner=request.user,
-        status='pending'
+        vehicle__owner=request.user 
     )
-
-    booking.status = 'cancelled'
-    booking.save(update_fields=['status'])
+    if booking.status == 'pending':
+        booking.status = 'cancelled'
+        booking.save()
+        messages.warning(request, "Booking rejected.")
 
     # Notify customer
-    Notification.objects.create(
-        user=booking.user,
-        booking=booking
-    )
+    # Notification.objects.create(
+    #     user=booking.user,
+    #     booking=booking
+    # )
 
-    messages.warning(request, "Booking rejected.")
     return redirect('owner_bookings')
+
+
+#-------------------------------CONFIRM PICKUP VIEW---------------------------------
+
+@login_required
+def confirm_pickup(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id)
+
+   # Only allowed if owner already accepted
+    if booking.status != 'confirmed':
+        messages.error(request, "Booking not accepted yet.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    if request.user == booking.user:
+        booking.user_confirmed_pickup = True
+
+    elif request.user == booking.vehicle.owner:
+        booking.owner_confirmed_pickup = True
+
+    booking.save()
+
+    
+# START SERVICE ONLY WHEN BOTH CONFIRMED
+    if booking.user_confirmed_pickup and booking.owner_confirmed_pickup:
+        booking.service_started_at = timezone.now()
+        booking.expected_end_at = booking.calculate_expected_end()
+        booking.status = 'active'
+        booking.save()
+        messages.success(request, "Service started. Timer is now running.")
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+#----------------------------------CONFIRM RETURN VIEW ------------------------------------------
+
+@login_required
+def confirm_return(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id)
+
+    if booking.status != 'active':
+        messages.error(request, "Service not active.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    if request.user == booking.user:
+        booking.user_confirmed_return = True
+
+    elif request.user == booking.vehicle.owner:
+        booking.owner_confirmed_return = True
+
+    booking.save()
+
+    # COMPLETE SERVICE WHEN BOTH CONFIRMED
+    if booking.user_confirmed_return and booking.owner_confirmed_return:
+        booking.actual_end_at = timezone.now()
+
+        if booking.actual_end_at > booking.expected_end_at:
+            booking.status = 'late'
+            booking.late_fee = 500  # per your rule
+        else:
+            booking.status = 'completed'
+
+        booking.save(update_fields=[
+            'actual_end_at',
+            'status',
+            'late_fee'])
+        messages.success(request, "Service completed.")
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
