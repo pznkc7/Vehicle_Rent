@@ -69,17 +69,68 @@ def create_booking(request, vehicle_id):
             total_price=total_price,
             status='pending'
         )
-        #-----------------Create notification for vehicle owner--------------------
-        if vehicle.owner and vehicle.owner != request.user:
-            Notification.objects.create(
+        #-----------------Create notification for vehicle user and the owner--------------------
+        Notification.objects.bulk_create([
+            Notification(
                 user=vehicle.owner,
-                booking=booking
+                booking=booking,
+                message=f"New booking request for {vehicle.vehicle_name}"
+            ),
+            Notification(
+                user=request.user,
+                booking=booking,
+                message=f"Your booking request for {vehicle.vehicle_name} was created"
             )
+        ])
         messages.success(request, "Booking created successfully.")
         return redirect('my_bookings')
 
     return render(request, 'bookings/bookings.html', {'vehicle': vehicle})
 
+#------------------------------NOTIFICATION VIEW-------------------------------
+@login_required
+def notification_inbox(request):
+    notifications = Notification.objects.filter(
+        user=request.user
+    ).select_related('booking').order_by('-created_at')
+
+    return render(request, 'bookings/inbox.html', {
+        'notifications': notifications
+    })
+
+from django.views.decorators.http import require_POST 
+@require_POST
+@login_required
+def mark_notification_read(request, notification_id):
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        user=request.user
+    )
+
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+
+    # smart redirect
+    if notification.user == notification.booking.user:
+        return redirect('my_bookings')
+
+    elif notification.user == notification.booking.vehicle.owner:
+        return redirect('owner_bookings')
+
+    return redirect('notification_inbox')
+
+
+@login_required
+def mark_all_notifications_read(request):
+    Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).update(is_read=True)
+
+    messages.success(request, "All notifications marked as read.")
+    return redirect('notification_inbox')
 #-------------------------------MY BOOKINGS VIEW---------------------------------
 
 @login_required
@@ -101,13 +152,6 @@ def owner_bookings(request):
         '-created_at'
     )
 
-    # MARK OWNER'S BOOKING NOTIFICATIONS AS READ
-    Notification.objects.filter(
-        user=request.user,
-        is_read=False,
-        booking__in=bookings
-    ).update(is_read=True)
-
     return render(request, 'bookings/owner_bookings.html', {
         'bookings': bookings
     })
@@ -126,12 +170,12 @@ def owner_accept_booking(request, booking_id):
     if booking.status == 'pending':
        booking.status = 'confirmed'
        booking.save()
+       Notification.objects.create(
+        user=booking.user,
+        booking=booking,
+        message=f"Your booking for {booking.vehicle.vehicle_name} was accepted"
+    )
        messages.success(request, "Booking accepted")
-    # Notify customer
-    # Notification.objects.create(
-    #     user=booking.user,
-    #     booking=booking
-    # )
 
     return redirect('owner_bookings')
 
@@ -146,14 +190,12 @@ def owner_reject_booking(request, booking_id):
     if booking.status == 'pending':
         booking.status = 'cancelled'
         booking.save()
+        Notification.objects.create(
+        user=booking.user,
+        booking=booking,
+        message=f"Your booking for {booking.vehicle.vehicle_name} was rejected"
+    )
         messages.warning(request, "Booking rejected.")
-
-    # Notify customer
-    # Notification.objects.create(
-    #     user=booking.user,
-    #     booking=booking
-    # )
-
     return redirect('owner_bookings')
 
 
@@ -176,6 +218,7 @@ def confirm_pickup(request, booking_id):
 
     booking.save()
 
+
     
 # START SERVICE ONLY WHEN BOTH CONFIRMED
     if booking.user_confirmed_pickup and booking.owner_confirmed_pickup:
@@ -183,6 +226,18 @@ def confirm_pickup(request, booking_id):
         booking.expected_end_at = booking.calculate_expected_end()
         booking.status = 'active'
         booking.save()
+        Notification.objects.bulk_create([
+            Notification(
+                user=booking.vehicle.owner,
+                booking=booking,
+                message=f"Your vehicle  {booking.vehicle.vehicle_name} is picked up by {booking.user.username} so Timer is now running  "
+            ),
+            Notification(
+                user=booking.user,
+                booking=booking,
+                message=f"You have successfully picked up {booking.vehicle.vehicle_name} so Timer is now running.                           "
+            )
+        ])
         messages.success(request, "Service started. Timer is now running.")
 
     return redirect(request.META.get('HTTP_REFERER', '/'))
@@ -220,6 +275,19 @@ def confirm_return(request, booking_id):
             'actual_end_at',
             'status',
             'late_fee'])
+        
+        Notification.objects.bulk_create([
+            Notification(
+                user=booking.vehicle.owner,
+                booking=booking,
+                message=f"Your vehicle  {booking.vehicle.vehicle_name} is returned by {booking.user.username} so Timer is now stopped  "
+            ),
+            Notification(
+                user=booking.user,
+                booking=booking,
+                message=f"You have successfully returned {booking.vehicle.vehicle_name} so Timer is now stopped.                           "
+            )
+        ])
         messages.success(request, "Service completed.")
 
     return redirect(request.META.get('HTTP_REFERER', '/'))
